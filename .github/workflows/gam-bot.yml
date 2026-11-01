@@ -1,25 +1,40 @@
 
-name: GAM BOT Source Package
+name: GAM BOT MT5 Compiler
 
 on:
   workflow_dispatch:
 
 jobs:
-  package:
-    runs-on: ubuntu-latest
+  compile:
+    runs-on: windows-latest
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Package GAM BOT source
+      - name: Find MetaEditor
+        shell: powershell
         run: |
-          mkdir -p output
-          cp GAM_BOT_MultiSymbol.mq5 output/
-          zip -j GAM_BOT_Source.zip output/GAM_BOT_MultiSymbol.mq5
+          $editor = Get-ChildItem "C:\Program Files" -Filter MetaEditor64.exe -Recurse -ErrorAction SilentlyContinue | Select-Object -First 1
+          if (-not $editor) {
+            throw "MetaEditor is not installed. Cannot compile."
+          }
+          echo "METAEDITOR=$($editor.FullName)" >> $env:GITHUB_ENV
 
-      - name: Upload GAM BOT package
+      - name: Compile GAM BOT
+        shell: powershell
+        run: |
+          New-Item -ItemType Directory -Force output
+          & "$env:METAEDITOR" /compile:"$env:GITHUB_WORKSPACE\GAM_BOT_MultiSymbol.mq5" /log:"$env:GITHUB_WORKSPACE\output\compile.log"
+          Start-Sleep -Seconds 5
+          $ex5 = Get-ChildItem -Path $env:GITHUB_WORKSPACE -Filter "*.ex5" -Recurse
+          if (-not $ex5) {
+            throw "Compilation failed. Check compile.log."
+          }
+          Copy-Item $ex5[0].FullName output\GAM_BOT_MultiSymbol.ex5
+
+      - name: Upload compiled EA
         uses: actions/upload-artifact@v4
         with:
-          name: GAM-BOT-Source
-          path: GAM_BOT_Source.zip
+          name: GAM-BOT-EX5
+          path: output/
