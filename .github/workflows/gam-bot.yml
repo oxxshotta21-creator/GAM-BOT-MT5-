@@ -1,0 +1,25 @@
+
+name: GAM BOT Source Package
+
+on:
+  workflow_dispatch:
+
+jobs:
+  package:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Package GAM BOT source
+        run: |
+          mkdir -p output
+          cp GAM_BOT_MultiSymbol.mq5 output/
+          zip -j GAM_BOT_Source.zip output/GAM_BOT_MultiSymbol.mq5
+
+      - name: Upload GAM BOT package
+        uses: actions/upload-artifact@v4
+        with:
+          name: GAM-BOT-Source
+          path: GAM_BOT_Source.zip
